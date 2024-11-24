@@ -50,7 +50,7 @@ def Main():
     # Define normalization functions
     normalizations = {
         'Standardization': scale_features_standard,
-        #'Min-Max Scaling': scale_features_minmax  # Include if desired
+        'Min-Max Scaling': scale_features_minmax  # Include if desired
     }
 
     # Define feature selection methods
