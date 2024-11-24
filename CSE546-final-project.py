@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os  # For file path operations
+from PIL import Image  # For image handling
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, label_binarize
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import VarianceThreshold, RFE
@@ -29,48 +31,49 @@ def Main():
     # Concatenate the two datasets
     data = pd.concat([data, data2], ignore_index=True)
 
+    # Ensure 'image_name' and 'class' columns exist
+    if not {'image_name', 'class'}.issubset(data.columns):
+        raise ValueError("The dataset must contain 'image_name' and 'class' columns.")
+
     # Separate features and target variable
     X = data.drop(['image_name', 'class'], axis=1)
     y = data['class']
+    image_names = data['image_name']  # Store image names for later use
     print("Features and target variable separated.")
 
     # Split the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    X_train, X_test, y_train, y_test, image_train, image_test = train_test_split(
+        X, y, image_names, test_size=0.2, random_state=42, stratify=y
     )
     print("Data split into training and testing sets.")
 
     # Define normalization functions
     normalizations = {
         'Standardization': scale_features_standard,
-        'Min-Max Scaling': scale_features_minmax  # Uncomment if you want to include Min-Max Scaling
+        #'Min-Max Scaling': scale_features_minmax  # Include if desired
     }
 
     # Define feature selection methods
     feature_selections = {
         'Variance Threshold': select_features_variance_threshold,
-        'RFE': select_features_rfe
+       # 'RFE': select_features_rfe
     }
 
     # Define PCA options
-    pca_options = [2, 3, 5, 7, 10]  # Including 2 for better visualization
+    pca_options = [2, 3, 5, 7, 10]  # Including 2 for visualization
 
     # Define classifiers
     classifiers = {
-        'Logistic Regression': logistic_regression_model(),
+        #'Logistic Regression': logistic_regression_model(),
         'SVM': svm_model(),
-        'Random Forest': random_forest_model(),
-        'KNN': knn_model(),
-        'AdaBoost': adaboost_model(),
-        'Bagging': bagging_model()
+        #'Random Forest': random_forest_model(),
+        #'KNN': knn_model(),
+        #'AdaBoost': adaboost_model(),
+        #'Bagging': bagging_model()
     }
-
-    # Define number of clusters for clustering algorithms
-    cluster_options = [2, 3, 4, 5]  # Adjust based on your data
 
     # Initialize results list
     results = []
-    clustering_results = []  # To store clustering information
 
     # Calculate total iterations for progress tracking
     total_iterations = len(normalizations) * len(feature_selections) * len(pca_options) * len(classifiers)
@@ -92,7 +95,7 @@ def Main():
             print(f"  Applying feature selection: {fs_name}")
             if fs_name == 'RFE':
                 X_fs = fs_func(X_norm, y_train)
-                X_fs_test = fs_func(X_norm_test, y_test)
+                X_fs_test = fs_func(X_norm_test, y_test)  # Typically, y_test isn't used for feature selection
             else:
                 X_fs = fs_func(X_norm, y_train)
                 X_fs_test = fs_func(X_norm_test, y_test)
@@ -107,8 +110,8 @@ def Main():
 
     print("Preprocessing Pipeline completed.")
 
-    # ====================== Second Pipeline: PCA, Clustering & Classification ======================
-    print("\nStarting PCA, Clustering & Classification Pipeline...")
+    # ====================== Second Pipeline: PCA & Classification ======================
+    print("\nStarting PCA & Classification Pipeline...")
 
     # Define KFold cross-validation
     kf = get_kfold()
@@ -123,19 +126,15 @@ def Main():
         # Loop over PCA options
         for n_components in pca_options:
             print(f"\nApplying PCA with {n_components} components for normalization: {norm_name}, feature selection: {fs_name}")
-            X_pca = pca_transform(X_fs, n_components)
-            X_pca_test = pca_transform(X_fs_test, n_components)
             
-            # Perform Clustering on Training Data
-            for k in cluster_options:
-                print(f"  Performing K-Means Clustering with k={k}")
-                kmeans_labels = perform_kmeans_clustering(X_pca, k)
-                plot_clusters(X_pca, kmeans_labels, f'K-Means (k={k}) - Norm: {norm_name}, FS: {fs_name}, PCA: {n_components}')
-
-                print(f"  Performing Agglomerative Clustering with k={k}")
-                agglo_labels = perform_agglomerative_clustering(X_pca, k)
-                plot_clusters(X_pca, agglo_labels, f'Agglomerative Clustering (k={k}) - Norm: {norm_name}, FS: {fs_name}, PCA: {n_components}')
+            # Fit PCA on training data
+            pca, X_pca = fit_pca(X_fs, n_components)
             
+            # Transform test data using the fitted PCA
+            X_pca_test = pca_transform(pca, X_fs_test)
+            
+            print(f"  Shape after PCA: {X_pca.shape}")
+            print(f"  Shape of X_pca_test: {X_pca_test.shape}")
             # Loop over classifiers
             for clf_name, clf in classifiers.items():
                 print(f"  Training classifier: {clf_name} ({iteration}/{total_iterations})")
@@ -160,7 +159,9 @@ def Main():
                     
                     accuracy, f1, auc = evaluate_model(y_fold_val, y_pred, y_proba)
                     cv_scores.append((accuracy, f1, auc))
-                
+
+                print(f"Length of image_test: {len(image_test)}")  # Should be 1000
+
                 # Average CV scores
                 avg_scores = pd.DataFrame(cv_scores, columns=['Accuracy', 'F1', 'AUC']).mean()
                 
@@ -181,34 +182,85 @@ def Main():
                     'CV_AUC': avg_scores['AUC'],
                     'Test_Accuracy': test_accuracy,
                     'Test_F1': test_f1,
-                    'Test_AUC': test_auc
+                    'Test_AUC': test_auc,
+                    'X_pca_test': X_pca_test,          # Store transformed test data for clustering
+                    'y_test_pred': y_test_pred         # Store test predictions for image validation
                 }
                 results.append(result)
 
-    print("\nPCA, Clustering & Classification Pipeline completed.")
+    print("\nPCA & Classification Pipeline completed.")
 
-    # Convert results to DataFrame and display
+        # ====================== Identifying Top 10 Models ======================
+    print("\nIdentifying Top 10 Models based on Test Accuracy...")
     results_df = pd.DataFrame(results)
-    print("\nAll iterations completed.")
-    print(results_df.sort_values(by='Test_Accuracy', ascending=False))
+    top_10_results = results_df.sort_values(by='Test_Accuracy', ascending=False).head(10)
+    print("Top 10 Models:")
+    print(top_10_results[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy']])
 
-    # Save results to CSV
-    results_df.to_csv('model_results.csv', index=False)
-    print("Results saved to 'model_results.csv'.")
+    # ====================== Clustering Visualization ======================
+    print("\nStarting Clustering Visualization for Top 10 Models...")
 
-    # Plotting results
-    plot_metric_by_parameter(results_df, 'Test_Accuracy', 'Classifier')
-    plot_metric_by_parameter(results_df, 'Test_Accuracy', 'Normalization')
-    plot_metric_by_parameter(results_df, 'Test_Accuracy', 'Feature_Selection')
-    plot_metric_by_parameter(results_df, 'Test_Accuracy', 'PCA_Components')
+    # Select top 10 models
+    top_10 = top_10_results.head(10).reset_index(drop=True)
 
-    # Display top results
-    display_top_results(results_df, 'Test_Accuracy')
+    # Determine subplot layout
+    num_plots = 10
+    plots_per_row = 5
+    num_rows = 2
+    fig, axes = plt.subplots(num_rows, plots_per_row, figsize=(20, 8))
+    axes = axes.flatten()
 
-    # Assuming the best model is the first in the sorted DataFrame
+    for idx, row in top_10.iterrows():
+        title_base = f"Model {idx+1}: {row['Classifier']} (Norm: {row['Normalization']}, FS: {row['Feature_Selection']}, PCA: {row['PCA_Components']})"
+        X_pca_test = row['X_pca_test']
+        y_test_true = y_test.reset_index(drop=True)  # Ensure y_test is aligned
+        y_test_pred = row['y_test_pred']
+        image_test_aligned = image_test.reset_index(drop=True)  # Ensure image_test is aligned
+        
+        # Verify lengths
+        print(f"Model {idx+1}:")
+        print(f"  Length of y_test_true: {len(y_test_true)}")
+        print(f"  Length of y_test_pred: {len(y_test_pred)}")
+        print(f"  Length of image_test_aligned: {len(image_test_aligned)}")
+        
+        # Ensure all lengths match
+        if not (len(y_test_true) == len(y_test_pred) == len(image_test_aligned)):
+            print("  Mismatch in lengths. Skipping this model.")
+            continue
+        
+        # Perform K-Means Clustering
+        k = 5  # Example number of clusters; adjust as needed
+        kmeans_labels = perform_kmeans_clustering(X_pca_test, k)
+        
+        # Plot K-Means Clustering
+        ax = axes[idx]
+        scatter = ax.scatter(X_pca_test[:, 0], X_pca_test[:, 1], c=kmeans_labels, cmap='viridis', alpha=0.6)
+        ax.set_title(f"{title_base}\nK-Means (k={k})")
+        ax.set_xlabel('PCA Component 1')
+        ax.set_ylabel('PCA Component 2')
+        ax.legend(*scatter.legend_elements(), title="Clusters")
+
+    plt.tight_layout()
+    plt.show()
+
+    # Plot K-Means Clustering
+    ax = axes[idx]
+    scatter = ax.scatter(X_pca_test[:, 0], X_pca_test[:, 1], c=kmeans_labels, cmap='viridis', alpha=0.6)
+    ax.set_title(f"{title_base}\nK-Means (k={k})")
+    ax.set_xlabel('PCA Component 1')
+    ax.set_ylabel('PCA Component 2')
+    ax.legend(*scatter.legend_elements(), title="Clusters")
+
+    plt.tight_layout()
+    plt.show()
+
+    # ====================== Image Validation and Sample Display ======================
+    print("\nStarting Image Validation and Sample Display...")
+
+    # Identify the best model
     best_result = results_df.sort_values(by='Test_Accuracy', ascending=False).iloc[0]
     print("\nBest Model Parameters:")
-    print(best_result)
+    print(best_result[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy', 'Test_F1', 'Test_AUC']])
 
     # Re-train the best model on the entire training set and evaluate on the test set
     best_norm = best_result['Normalization']
@@ -229,9 +281,11 @@ def Main():
         X_fs = feature_selections[best_fs](X_norm, y_train)
         X_fs_test = feature_selections[best_fs](X_norm_test, y_test)
 
+
     # Apply best PCA
-    X_pca = pca_transform(X_fs, best_pca_components)
-    X_pca_test = pca_transform(X_fs_test, best_pca_components)
+    pca, X_pca = fit_pca(X_fs, best_pca_components)
+    X_pca_test = pca_transform(pca, X_fs_test)
+
 
     # Train best model
     best_pipeline = create_pipeline([('classifier', best_classifier)])
@@ -246,104 +300,164 @@ def Main():
     # Plot confusion matrix for best model
     plot_confusion_matrix(y_test, y_test_pred, best_classifier_name)
 
-# Function to scale the features using StandardScaler
+    # ====================== Image Validation and Sample Display ======================
+    print("\nStarting Image Validation and Sample Display...")
+
+    # Collect predictions from the best model
+    best_predictions = y_test_pred  # NumPy array
+    best_true_labels = y_test
+    best_image_names = image_test.reset_index(drop=True)  # Reset index to align with predictions
+
+    # Convert best_predictions to a Pandas Series and reset index
+    best_predictions = pd.Series(best_predictions).reset_index(drop=True)
+
+    # Ensure best_true_labels is a Series with reset index
+    best_true_labels = best_true_labels.reset_index(drop=True)
+
+    # Create a DataFrame for analysis
+    validation_df = pd.DataFrame({
+        'image_name': best_image_names,
+        'true_label': best_true_labels,
+        'predicted_label': best_predictions
+    })
+
+    # Verify the DataFrame
+    print("\nValidation DataFrame created successfully.")
+    print(validation_df.head())
+    print(f"Shape of validation_df: {validation_df.shape}")  # Should be (1334, 3)
+    # Identify correct and incorrect predictions
+    correct_predictions = validation_df[validation_df['true_label'] == validation_df['predicted_label']]
+    incorrect_predictions = validation_df[validation_df['true_label'] != validation_df['predicted_label']]
+
+    # Select top 5 correct and top 5 incorrect samples
+    top_correct = correct_predictions.head(5)
+    top_incorrect = incorrect_predictions.head(5)
+
+    # Display top correct predictions
+    display_image_samples(top_correct, "Top Correct")
+
+    # Display top incorrect predictions
+    display_image_samples(top_incorrect, "Top Incorrect")
+
+# Function to display images in a grid
+def display_image_samples(samples_df, title_prefix):
+    num_samples = samples_df.shape[0]
+    cols = 5
+    rows = num_samples // cols + int(num_samples % cols != 0)
+    plt.figure(figsize=(20, 4 * rows))
+    
+    # Use a separate counter starting at 1
+    for i, (idx, row) in enumerate(samples_df.iterrows(), 1):
+        image_path = get_image_path(row['image_name'], row['true_label'])
+        if not os.path.exists(image_path):
+            print(f"Image not found: {image_path}")
+            continue
+        img = Image.open(image_path)
+        plt.subplot(rows, cols, i)  # Use the counter 'i' instead of 'idx + 1'
+        plt.imshow(img, cmap='gray')  # Adjust cmap as needed
+        plt.title(f"Name: {row['image_name']}\nTrue: {row['true_label']}, Pred: {row['predicted_label']}")
+        plt.axis('off')
+    
+    plt.suptitle(f"{title_prefix} Samples", fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+# Function to get the image path based on the image name and class label
+def get_image_path(image_name, class_label):
+    base_dir = 'archive/images'
+    class_dir = class_label.lower()  # Ensure directory names are lowercase
+    image_path = os.path.join(base_dir, class_dir, image_name)
+    return image_path
+# Function to scale features using standardization
 def scale_features_standard(X):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     return X_scaled
-
-# Function to scale the features using MinMaxScaler
+# Function to scale features using Min-Max scaling
 def scale_features_minmax(X):
     scaler = MinMaxScaler()
     X_scaled = scaler.fit_transform(X)
     return X_scaled
-
-# PCA Function
-def pca_transform(X, n_components):
-    pca = PCA(n_components=n_components)
-    X_pca = pca.fit_transform(X)
+# Function to perform PCA transformation
+def pca_transform(pca, X):
+    X_pca = pca.transform(X)
     return X_pca
-
-# Feature Selection using Variance Threshold
+# Function to fit PCA
+def fit_pca(X, n_components):
+    pca = PCA(n_components=n_components, random_state=0)
+    X_pca = pca.fit_transform(X)
+    return pca, X_pca
+# Function to select features using variance threshold
 def select_features_variance_threshold(X, y, threshold=0.0):
     selector = VarianceThreshold(threshold=threshold)
     X_new = selector.fit_transform(X)
     return X_new
-
-# Feature Selection using RFE
+# Function to select features using Recursive Feature Elimination (RFE)
 def select_features_rfe(X, y, n_features=50):
-    estimator = RandomForestClassifier()
+    estimator = RandomForestClassifier(random_state=0)
     selector = RFE(estimator, n_features_to_select=n_features, step=10)
     selector.fit(X, y)
     X_new = selector.transform(X)
     return X_new
-
-# Classifier Logistic Regression
+# Function to create a Logistic Regression model
 def logistic_regression_model():
-    return LogisticRegression(max_iter=1000)
-
-# Classifier Random Forest
+    return LogisticRegression(max_iter=1000, random_state=0)
+# Function to create a Random Forest model
 def random_forest_model():
-    return RandomForestClassifier()
-
-# Classifier SVM
+    return RandomForestClassifier(random_state=0)
+# Function to create an SVM model
 def svm_model():
-    return SVC(probability=True)  # Set probability=True to enable predict_proba
-
-# Classifier KNN
+    return SVC(probability=True, random_state=0)  # Enable predict_proba
+# Function to create a KNN model
 def knn_model():
     return KNeighborsClassifier()
-
-# Ensemble Classifier AdaBoost
+# Function to create an AdaBoost model
 def adaboost_model():
     return AdaBoostClassifier(
-        estimator=DecisionTreeClassifier(max_depth=1),
+        estimator=DecisionTreeClassifier(max_depth=1, random_state=0),
         n_estimators=50,
         random_state=0
     )
-
-# Ensemble Classifier Bagging
+# Function to create a Bagging model
 def bagging_model():
     return BaggingClassifier(
-        estimator=DecisionTreeClassifier(),
+        estimator=DecisionTreeClassifier(random_state=0),
         n_estimators=10,
         random_state=0
     )
-
-# Function to get KFold
+# Function to get KFold cross-validation
 def get_kfold():
     return KFold(n_splits=4, shuffle=True, random_state=0)
-
 # Function to create a pipeline
 def create_pipeline(steps):
     return Pipeline(steps)
-
-# Function to evaluate the model
+# Function to evaluate a model
 def evaluate_model(y_true, y_pred, y_proba, average='weighted'):
     accuracy = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average=average)
     # Binarize the output for ROC AUC
     classes = sorted(list(set(y_true)))
     y_true_bin = label_binarize(y_true, classes=classes)
-    auc = roc_auc_score(y_true_bin, y_proba, multi_class='ovr', average=average)
+    if y_true_bin.shape[1] == 1:
+        # Binary classification
+        auc = roc_auc_score(y_true_bin, y_proba[:,1])
+    else:
+        # Multiclass classification
+        auc = roc_auc_score(y_true_bin, y_proba, multi_class='ovr', average=average)
     return accuracy, f1, auc
-
-# Function to perform K-Means Clustering
+# Function to perform K-Means clustering
 def perform_kmeans_clustering(X, k):
     kmeans = KMeans(n_clusters=k, random_state=0)
     labels = kmeans.fit_predict(X)
     silhouette_avg = silhouette_score(X, labels)
     print(f"    K-Means Silhouette Score: {silhouette_avg:.4f}")
     return labels
-
-# Function to perform Agglomerative Clustering
+# Function to perform Agglomerative clustering
 def perform_agglomerative_clustering(X, k):
     agglo = AgglomerativeClustering(n_clusters=k)
     labels = agglo.fit_predict(X)
     silhouette_avg = silhouette_score(X, labels)
     print(f"    Agglomerative Clustering Silhouette Score: {silhouette_avg:.4f}")
     return labels
-
 # Function to plot clusters
 def plot_clusters(X, labels, title):
     plt.figure(figsize=(8, 6))
@@ -360,8 +474,7 @@ def plot_clusters(X, labels, title):
     plt.legend()
     plt.tight_layout()
     plt.show()
-
-# Function to plot metrics by parameter
+# Function to plot a metric by a parameter
 def plot_metric_by_parameter(results_df, metric, parameter):
     plt.figure(figsize=(10, 6))
     sns.barplot(x=parameter, y=metric, data=results_df)
@@ -371,14 +484,12 @@ def plot_metric_by_parameter(results_df, metric, parameter):
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
-
 # Function to display top results
 def display_top_results(results_df, metric, top_n=5):
     sorted_df = results_df.sort_values(by=metric, ascending=False).head(top_n)
     print(f"\nTop {top_n} results based on {metric}:")
     print(sorted_df)
-
-# Function to plot confusion matrix
+# Function to plot a confusion matrix
 def plot_confusion_matrix(y_true, y_pred, classifier_name):
     cm = confusion_matrix(y_true, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=sorted(set(y_true)))
