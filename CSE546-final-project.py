@@ -6,16 +6,54 @@ import os  # For file path operations
 from PIL import Image  # For image handling
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, label_binarize
 from sklearn.decomposition import PCA
-from sklearn.feature_selection import VarianceThreshold, RFE
+from sklearn.feature_selection import VarianceThreshold, RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, BaggingClassifier, GradientBoostingClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, confusion_matrix, ConfusionMatrixDisplay, silhouette_score
 from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.model_selection import GridSearchCV
+
+
+# Define the grid search parameters for each classifier
+param_grids = {
+    'Logistic Regression': {
+        'classifier__C': [0.1, 1, 10],
+        'classifier__penalty': ['l1', 'l2'],
+        'classifier__solver': ['liblinear', 'saga'],
+    },
+    'SVM': {
+        'classifier__C': [0.1, 1, 10],
+        'classifier__kernel': ['linear', 'rbf'],
+        'classifier__gamma': ['scale', 'auto'],
+    },
+    'Random Forest': {
+        'classifier__n_estimators': [100, 200],
+        'classifier__max_depth': [None, 10, 20],
+        'classifier__min_samples_split': [2, 5],
+    },
+    'KNN': {
+        'classifier__n_neighbors': [3, 5, 7],
+        'classifier__weights': ['uniform', 'distance'],
+    },
+    'AdaBoost': {
+        'classifier__n_estimators': [50, 100],
+        'classifier__learning_rate': [0.1, 1],
+    },
+    'Bagging': {
+        'classifier__n_estimators': [10, 20],
+        'classifier__max_samples': [0.5, 1.0],
+    },
+    'Gradient Boosted Tree': {
+        'classifier__n_estimators': [100, 200],
+        'classifier__learning_rate': [0.1, 0.01],
+        'classifier__max_depth': [3, 5],
+    },
+}
 
 def Main():
     # Load the dataset
@@ -50,13 +88,14 @@ def Main():
     # Define normalization functions
     normalizations = {
         'Standardization': scale_features_standard,
-        'Min-Max Scaling': scale_features_minmax  # Include if desired
+        #'Min-Max Scaling': scale_features_minmax  # Include if desired
     }
 
     # Define feature selection methods
     feature_selections = {
         'Variance Threshold': select_features_variance_threshold,
-       # 'RFE': select_features_rfe
+       # 'RFE': select_features_rfe,
+        'SelectKBest': select_features_selectkbest
     }
 
     # Define PCA options
@@ -64,6 +103,7 @@ def Main():
 
     # Define classifiers
     classifiers = {
+        'Gradient Boosted Tree': gradient_boosting_model(),
         #'Logistic Regression': logistic_regression_model(),
         'SVM': svm_model(),
         #'Random Forest': random_forest_model(),
@@ -135,6 +175,8 @@ def Main():
             
             print(f"  Shape after PCA: {X_pca.shape}")
             print(f"  Shape of X_pca_test: {X_pca_test.shape}")
+            print("\nPlotting Elbow Curve and Silhouette Scores for KMeans Clustering...")
+            plot_elbow_silhouette(X_pca_test)
             # Loop over classifiers
             for clf_name, clf in classifiers.items():
                 print(f"  Training classifier: {clf_name} ({iteration}/{total_iterations})")
@@ -143,32 +185,34 @@ def Main():
                 # Create pipeline steps: PCA already applied, so only classifier is needed
                 pipeline = create_pipeline([('classifier', clf)])
                 
-                # Cross-validation
-                cv_scores = []
+                # Get parameter grid for this classifier
+                param_grid = param_grids.get(clf_name, {})
                 
-                fold_number = 1
-                for train_index, val_index in kf.split(X_pca, y_train):
-                    print(f"    Cross-validation fold {fold_number}/{kf.get_n_splits()}")
-                    fold_number += 1
-                    X_fold_train, X_fold_val = X_pca[train_index], X_pca[val_index]
-                    y_fold_train, y_fold_val = y_train.iloc[train_index], y_train.iloc[val_index]
+                if param_grid:
+                    # Create GridSearchCV
+                    grid_search = GridSearchCV(
+                        pipeline, param_grid, cv=kf, scoring='accuracy', n_jobs=-1
+                    )
                     
-                    pipeline.fit(X_fold_train, y_fold_train)
-                    y_pred = pipeline.predict(X_fold_val)
-                    y_proba = pipeline.predict_proba(X_fold_val)
+                    # Fit GridSearchCV on the training data
+                    grid_search.fit(X_pca, y_train)
                     
-                    accuracy, f1, auc = evaluate_model(y_fold_val, y_pred, y_proba)
-                    cv_scores.append((accuracy, f1, auc))
-
-                print(f"Length of image_test: {len(image_test)}")  # Should be 1000
-
-                # Average CV scores
-                avg_scores = pd.DataFrame(cv_scores, columns=['Accuracy', 'F1', 'AUC']).mean()
+                    # Get the best estimator
+                    best_pipeline = grid_search.best_estimator_
+                    
+                    # Cross-validation score
+                    mean_cv_score = grid_search.best_score_
+                    best_params = grid_search.best_params_
+                else:
+                    # If no parameter grid is specified, just fit the pipeline
+                    pipeline.fit(X_pca, y_train)
+                    best_pipeline = pipeline
+                    mean_cv_score = pipeline.score(X_pca, y_train)
+                    best_params = {}
                 
                 # Test set evaluation
-                pipeline.fit(X_pca, y_train)
-                y_test_pred = pipeline.predict(X_pca_test)
-                y_test_proba = pipeline.predict_proba(X_pca_test)
+                y_test_pred = best_pipeline.predict(X_pca_test)
+                y_test_proba = best_pipeline.predict_proba(X_pca_test)
                 test_accuracy, test_f1, test_auc = evaluate_model(y_test, y_test_pred, y_test_proba)
                 
                 # Store results
@@ -177,14 +221,13 @@ def Main():
                     'Feature_Selection': fs_name,
                     'PCA_Components': n_components,
                     'Classifier': clf_name,
-                    'CV_Accuracy': avg_scores['Accuracy'],
-                    'CV_F1': avg_scores['F1'],
-                    'CV_AUC': avg_scores['AUC'],
+                    'Best_Params': best_params,
+                    'CV_Mean_Accuracy': mean_cv_score,
                     'Test_Accuracy': test_accuracy,
                     'Test_F1': test_f1,
                     'Test_AUC': test_auc,
-                    'X_pca_test': X_pca_test,          # Store transformed test data for clustering
-                    'y_test_pred': y_test_pred         # Store test predictions for image validation
+                    'X_pca_test': X_pca_test,
+                    'y_test_pred': y_test_pred
                 }
                 results.append(result)
 
@@ -197,7 +240,7 @@ def Main():
     print("Top 10 Models:")
     print(top_10_results[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy']])
 
-    # ====================== Clustering Visualization ======================
+    #
     print("\nStarting Clustering Visualization for Top 10 Models...")
 
     # Select top 10 models
@@ -338,7 +381,37 @@ def Main():
 
     # Display top incorrect predictions
     display_image_samples(top_incorrect, "Top Incorrect")
-
+#Function to plot elbow curve and silhouette scores
+# Function to plot elbow curve and silhouette scores
+def plot_elbow_silhouette(X):
+    inertia = []
+    silhouette_scores = []
+    K = range(2, 11)  # Vary k from 2 to 10
+    for k in K:
+        kmeans = KMeans(n_clusters=k, random_state=0)
+        labels = kmeans.fit_predict(X)
+        inertia.append(kmeans.inertia_)
+        silhouette_avg = silhouette_score(X, labels)
+        silhouette_scores.append(silhouette_avg)
+        print(f"  k={k}, Inertia={kmeans.inertia_:.2f}, Silhouette Score={silhouette_avg:.4f}")
+    
+    # Plot the elbow curve
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(K, inertia, 'bx-')
+    plt.xlabel('Number of clusters k')
+    plt.ylabel('Inertia')
+    plt.title('Elbow Method For Optimal k')
+    
+    # Plot the silhouette scores
+    plt.subplot(1, 2, 2)
+    plt.plot(K, silhouette_scores, 'bx-')
+    plt.xlabel('Number of clusters k')
+    plt.ylabel('Silhouette Score')
+    plt.title('Silhouette Scores For Various k')
+    
+    plt.tight_layout()
+    plt.show()
 # Function to display images in a grid
 def display_image_samples(samples_df, title_prefix):
     num_samples = samples_df.shape[0]
@@ -398,6 +471,11 @@ def select_features_rfe(X, y, n_features=50):
     selector.fit(X, y)
     X_new = selector.transform(X)
     return X_new
+# Function to select features using SelectKBest
+def select_features_selectkbest(X, y, k=50):
+    selector = SelectKBest(score_func=f_classif, k=k)
+    X_new = selector.fit_transform(X, y)
+    return X_new
 # Function to create a Logistic Regression model
 def logistic_regression_model():
     return LogisticRegression(max_iter=1000, random_state=0)
@@ -424,6 +502,9 @@ def bagging_model():
         n_estimators=10,
         random_state=0
     )
+# Function to create a Gradient Boosted Tree model
+def gradient_boosting_model():
+    return GradientBoostingClassifier(random_state=0)
 # Function to get KFold cross-validation
 def get_kfold():
     return KFold(n_splits=4, shuffle=True, random_state=0)
