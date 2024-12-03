@@ -1,0 +1,34 @@
+Top 3 Model Parameters:
+
+Model Rank 3 Parameters:
+Normalization           Standardization
+Feature_Selection    Variance Threshold
+PCA_Components                        5
+Classifier                Random Forest
+Test_Accuracy                  0.903298
+Test_F1                        0.903557
+Test_AUC                       0.986465
+Silhouette_Score               0.446409
+Name: 2, dtype: object
+
+Model Rank 12 Parameters:
+Normalization           Min-Max Scaling
+Feature_Selection    Variance Threshold
+PCA_Components                        5
+Classifier                Random Forest
+Test_Accuracy                  0.898051
+Test_F1                        0.898158
+Test_AUC                       0.986395
+Silhouette_Score               0.452345
+Name: 11, dtype: object
+
+Model Rank 9 Parameters:
+Normalization        Standardization
+Feature_Selection        SelectKBest
+PCA_Components                     5
+Classifier             Random Forest
+Test_Accuracy               0.878561
+Test_F1                      0.87864
+Test_AUC                    0.981748
+Silhouette_Score            0.488254
+Name: 8, dtype: object

@@ -1,0 +1,527 @@
+Applying PCA with 2 components for normalization: Standardization, feature selection: Variance Threshold
+  Shape after PCA: (5335, 2)
+  Shape of X_pca_test: (1334, 2)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=161988.72, Silhouette Score=0.3396
+  k=3, Inertia=65059.45, Silhouette Score=0.5354
+  k=4, Inertia=42278.98, Silhouette Score=0.4599
+  k=5, Inertia=31058.62, Silhouette Score=0.4576
+  Training classifier: Logistic Regression (1/18)
+
+Applying PCA with 3 components for normalization: Standardization, feature selection: Variance Threshold
+  Shape after PCA: (5335, 3)
+  Shape of X_pca_test: (1334, 3)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=221146.70, Silhouette Score=0.2778
+  k=3, Inertia=138258.28, Silhouette Score=0.3977
+  k=4, Inertia=70417.67, Silhouette Score=0.4962
+  k=5, Inertia=52048.87, Silhouette Score=0.4379
+  Training classifier: Logistic Regression (2/18)
+
+Applying PCA with 5 components for normalization: Standardization, feature selection: Variance Threshold
+  Shape after PCA: (5335, 5)
+  Shape of X_pca_test: (1334, 5)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=254574.69, Silhouette Score=0.2371
+  k=3, Inertia=171076.06, Silhouette Score=0.3377
+  k=4, Inertia=102763.13, Silhouette Score=0.4249
+  k=5, Inertia=74601.66, Silhouette Score=0.4464
+  Training classifier: Logistic Regression (3/18)
+
+Applying PCA with 2 components for normalization: Standardization, feature selection: RFE
+  Shape after PCA: (5335, 2)
+  Shape of X_pca_test: (1334, 2)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=1603.69, Silhouette Score=0.4483
+  k=3, Inertia=861.69, Silhouette Score=0.4737
+  k=4, Inertia=701.51, Silhouette Score=0.3917
+  k=5, Inertia=513.12, Silhouette Score=0.4048
+  Training classifier: Logistic Regression (4/18)
+
+Applying PCA with 3 components for normalization: Standardization, feature selection: RFE
+  Shape after PCA: (5335, 3)
+  Shape of X_pca_test: (1334, 3)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=3293.20, Silhouette Score=0.3763
+  k=3, Inertia=2521.62, Silhouette Score=0.3188
+  k=4, Inertia=1420.66, Silhouette Score=0.4165
+  k=5, Inertia=1196.70, Silhouette Score=0.3736
+  Training classifier: Logistic Regression (5/18)
+
+Applying PCA with 5 components for normalization: Standardization, feature selection: RFE
+  Shape after PCA: (5335, 5)
+  Shape of X_pca_test: (1334, 5)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=5906.36, Silhouette Score=0.3144
+  k=3, Inertia=4001.67, Silhouette Score=0.3801
+  k=4, Inertia=2882.80, Silhouette Score=0.3732
+  k=5, Inertia=2138.34, Silhouette Score=0.4010
+  Training classifier: Logistic Regression (6/18)
+
+Applying PCA with 2 components for normalization: Standardization, feature selection: SelectKBest
+  Shape after PCA: (5335, 2)
+  Shape of X_pca_test: (1334, 2)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=13745.39, Silhouette Score=0.5535
+  k=3, Inertia=9066.97, Silhouette Score=0.4347
+  k=4, Inertia=6354.77, Silhouette Score=0.4187
+  k=5, Inertia=4054.65, Silhouette Score=0.4718
+  Training classifier: Logistic Regression (7/18)
+
+Applying PCA with 3 components for normalization: Standardization, feature selection: SelectKBest
+  Shape after PCA: (5335, 3)
+  Shape of X_pca_test: (1334, 3)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=16601.09, Silhouette Score=0.5203
+  k=3, Inertia=11479.56, Silhouette Score=0.4501
+  k=4, Inertia=7332.00, Silhouette Score=0.4761
+  k=5, Inertia=5182.91, Silhouette Score=0.4589
+ Training classifier: Logistic Regression (8/18)
+
+Applying PCA with 5 components for normalization: Standardization, feature selection: SelectKBest
+  Shape after PCA: (5335, 5)
+  Shape of X_pca_test: (1334, 5)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=19046.33, Silhouette Score=0.4883
+  k=3, Inertia=15585.12, Silhouette Score=0.3295
+  k=4, Inertia=10985.91, Silhouette Score=0.3553
+  k=5, Inertia=6697.90, Silhouette Score=0.4406
+  Training classifier: Logistic Regression (9/18)
+
+Applying PCA with 2 components for normalization: Min-Max Scaling, feature selection: Variance Threshold
+  Shape after PCA: (5335, 2)
+  Shape of X_pca_test: (1334, 2)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=3875.38, Silhouette Score=0.4062
+  k=3, Inertia=2090.86, Silhouette Score=0.4808
+  k=4, Inertia=1236.80, Silhouette Score=0.4888
+  k=5, Inertia=917.08, Silhouette Score=0.4580
+  Training classifier: Logistic Regression (10/18)
+
+Applying PCA with 3 components for normalization: Min-Max Scaling, feature selection: Variance Threshold
+  Shape after PCA: (5335, 3)
+  Shape of X_pca_test: (1334, 3)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=5591.92, Silhouette Score=0.4433
+  k=3, Inertia=3878.17, Silhouette Score=0.3973
+  k=4, Inertia=2035.31, Silhouette Score=0.4948
+  k=5, Inertia=1516.46, Silhouette Score=0.4350
+  Training classifier: Logistic Regression (11/18)
+
+Applying PCA with 5 components for normalization: Min-Max Scaling, feature selection: Variance Threshold
+  Shape after PCA: (5335, 5)
+  Shape of X_pca_test: (1334, 5)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=6498.95, Silhouette Score=0.4001
+  k=3, Inertia=4680.54, Silhouette Score=0.3379
+  k=4, Inertia=3880.66, Silhouette Score=0.3441
+  k=5, Inertia=2117.53, Silhouette Score=0.4523
+  Training classifier: Logistic Regression (12/18)
+
+Applying PCA with 2 components for normalization: Min-Max Scaling, feature selection: RFE
+  Shape after PCA: (5335, 2)
+  Shape of X_pca_test: (1334, 2)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=22.20, Silhouette Score=0.4812
+  k=3, Inertia=12.41, Silhouette Score=0.4685
+  k=4, Inertia=9.67, Silhouette Score=0.4285
+  k=5, Inertia=7.64, Silhouette Score=0.3803
+  Training classifier: Logistic Regression (13/18)
+
+Applying PCA with 3 components for normalization: Min-Max Scaling, feature selection: RFE
+  Shape after PCA: (5335, 3)
+  Shape of X_pca_test: (1334, 3)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=36.55, Silhouette Score=0.4379
+  k=3, Inertia=24.44, Silhouette Score=0.3838
+  k=4, Inertia=18.53, Silhouette Score=0.3982
+  k=5, Inertia=15.52, Silhouette Score=0.3803
+  Training classifier: Logistic Regression (14/18)
+
+Applying PCA with 5 components for normalization: Min-Max Scaling, feature selection: RFE
+  Shape after PCA: (5335, 5)
+  Shape of X_pca_test: (1334, 5)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=73.89, Silhouette Score=0.4731
+  k=3, Inertia=53.22, Silhouette Score=0.3705
+  k=4, Inertia=43.29, Silhouette Score=0.3308
+  k=5, Inertia=34.71, Silhouette Score=0.3619
+  Training classifier: Logistic Regression (15/18)
+
+Applying PCA with 2 components for normalization: Min-Max Scaling, feature selection: SelectKBest
+  Shape after PCA: (5335, 2)
+  Shape of X_pca_test: (1334, 2)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=475.13, Silhouette Score=0.5605
+  k=3, Inertia=311.47, Silhouette Score=0.4288
+  k=4, Inertia=218.45, Silhouette Score=0.4185
+  k=5, Inertia=142.11, Silhouette Score=0.4736
+Training classifier: Logistic Regression (16/18)
+
+Applying PCA with 3 components for normalization: Min-Max Scaling, feature selection: SelectKBest
+  Shape after PCA: (5335, 3)
+  Shape of X_pca_test: (1334, 3)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=568.90, Silhouette Score=0.5283
+  k=3, Inertia=392.29, Silhouette Score=0.4412
+  k=4, Inertia=260.96, Silhouette Score=0.4620
+  k=5, Inertia=181.27, Silhouette Score=0.4602
+  Training classifier: Logistic Regression (17/18)
+
+Applying PCA with 5 components for normalization: Min-Max Scaling, feature selection: SelectKBest
+  Shape after PCA: (5335, 5)
+  Shape of X_pca_test: (1334, 5)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=659.59, Silhouette Score=0.4952
+  k=3, Inertia=482.95, Silhouette Score=0.3589
+  k=4, Inertia=376.52, Silhouette Score=0.3596
+  k=5, Inertia=234.78, Silhouette Score=0.4422
+  Training classifier: Logistic Regression (18/18)
+
+PCA & Classification Pipeline completed.
+
+Identifying Top 10 Models based on Test Accuracy...
+Top 10 Models:
+      Normalization   Feature_Selection  PCA_Components           Classifier  Test_Accuracy
+2   Standardization  Variance Threshold               5  Logistic Regression       0.901799
+17  Min-Max Scaling         SelectKBest               5  Logistic Regression       0.893553
+11  Min-Max Scaling  Variance Threshold               5  Logistic Regression       0.893553
+8   Standardization         SelectKBest               5  Logistic Regression       0.891304
+10  Min-Max Scaling  Variance Threshold               3  Logistic Regression       0.871064
+1   Standardization  Variance Threshold               3  Logistic Regression       0.869565
+7   Standardization         SelectKBest               3  Logistic Regression       0.839580
+0   Standardization  Variance Threshold               2  Logistic Regression       0.825337
+16  Min-Max Scaling         SelectKBest               3  Logistic Regression       0.818591
+9   Min-Max Scaling  Variance Threshold               2  Logistic Regression       0.812594
+
+Starting Clustering Visualization for Top 10 Models...
+Model 1:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4464
+Model 2:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4422
+Model 3:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4523
+Model 4:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4406
+Model 5:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4350
+Model 6:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4379
+Model 7:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4589
+Model 8:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4576
+Model 9:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4602
+Model 10:
+  Length of y_test_true: 1334
+  Length of y_test_pred: 1334
+  Length of image_test_aligned: 1334
+    K-Means Silhouette Score: 0.4580
+
+Starting Image Validation and Sample Display...
+
+Best Model Parameters:
+Normalization            Standardization
+Feature_Selection     Variance Threshold
+PCA_Components                         5
+Classifier           Logistic Regression
+Test_Accuracy                   0.901799
+Test_F1                         0.901693
+Test_AUC                        0.986029
+Name: 2, dtype: object
+
+Best Model Test Performance:
+Accuracy: 0.9010, F1 Score: 0.9010, AUC: 0.9860
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+supposed best according to Silhouette
+
+
+Applying PCA with 2 components for normalization: Min-Max Scaling, feature selection: SelectKBest
+  Shape after PCA: (5335, 2)
+  Shape of X_pca_test: (1334, 2)
+
+Plotting Elbow Curve and Silhouette Scores for KMeans Clustering...
+  k=2, Inertia=475.13, Silhouette Score=0.5605
+  k=3, Inertia=311.47, Silhouette Score=0.4288
+  k=4, Inertia=218.45, Silhouette Score=0.4185
+  k=5, Inertia=142.11, Silhouette Score=0.4736
+  Training classifier: Logistic Regression (16/18)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Top 3 Model Parameters:
+
+Model Rank 3 Parameters:
+Normalization            Standardization
+Feature_Selection     Variance Threshold
+PCA_Components                         5
+Classifier           Logistic Regression
+Test_Accuracy                   0.901799
+Test_F1                         0.901693
+Test_AUC                        0.986029
+Silhouette_Score                0.446409
+Name: 2, dtype: object
+
+Model Rank 18 Parameters:
+Normalization            Min-Max Scaling
+Feature_Selection            SelectKBest
+PCA_Components                         5
+Classifier           Logistic Regression
+Test_Accuracy                   0.893553
+Test_F1                          0.89352
+Test_AUC                        0.984691
+Silhouette_Score                0.495183
+Name: 17, dtype: object
+
+Model Rank 12 Parameters:
+Normalization            Min-Max Scaling
+Feature_Selection     Variance Threshold
+PCA_Components                         5
+Classifier           Logistic Regression
+Test_Accuracy                   0.893553
+Test_F1                          0.89349
+Test_AUC                        0.985869
+Silhouette_Score                0.452345
+Name: 11, dtype: object

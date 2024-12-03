@@ -23,13 +23,12 @@ from sklearn.model_selection import GridSearchCV
 param_grids = {
     'Logistic Regression': {
         'classifier__C': [0.1, 1, 10],
-        'classifier__penalty': ['l1', 'l2'],
-        'classifier__solver': ['liblinear', 'saga'],
+        'classifier__penalty': ['l2'],
     },
     'SVM': {
-        'classifier__C': [0.1, 1, 10],
+        'classifier__C': [0.1, 1, 2, 1.5, 10],
         'classifier__kernel': ['linear', 'rbf'],
-        'classifier__gamma': ['scale', 'auto'],
+        'classifier__gamma': ['scale'],
     },
     'Random Forest': {
         'classifier__n_estimators': [100, 200],
@@ -47,11 +46,6 @@ param_grids = {
     'Bagging': {
         'classifier__n_estimators': [10, 20],
         'classifier__max_samples': [0.5, 1.0],
-    },
-    'Gradient Boosted Tree': {
-        'classifier__n_estimators': [100, 200],
-        'classifier__learning_rate': [0.1, 0.01],
-        'classifier__max_depth': [3, 5],
     },
 }
 
@@ -88,22 +82,21 @@ def Main():
     # Define normalization functions
     normalizations = {
         'Standardization': scale_features_standard,
-        #'Min-Max Scaling': scale_features_minmax  # Include if desired
+        'Min-Max Scaling': scale_features_minmax
     }
 
     # Define feature selection methods
     feature_selections = {
         'Variance Threshold': select_features_variance_threshold,
-       # 'RFE': select_features_rfe,
+        'RFE': select_features_rfe,
         'SelectKBest': select_features_selectkbest
     }
 
     # Define PCA options
-    pca_options = [2, 3, 5, 7, 10]  # Including 2 for visualization
+    pca_options = [2, 3, 5, 7]  # Including 2 for visualization
 
     # Define classifiers
     classifiers = {
-        'Gradient Boosted Tree': gradient_boosting_model(),
         #'Logistic Regression': logistic_regression_model(),
         'SVM': svm_model(),
         #'Random Forest': random_forest_model(),
@@ -176,7 +169,8 @@ def Main():
             print(f"  Shape after PCA: {X_pca.shape}")
             print(f"  Shape of X_pca_test: {X_pca_test.shape}")
             print("\nPlotting Elbow Curve and Silhouette Scores for KMeans Clustering...")
-            plot_elbow_silhouette(X_pca_test)
+            best_k, best_silhouette = plot_elbow_silhouette(X_pca_test)
+            print(f"Optimal number of clusters (k) based on silhouette score: {best_k}")
             # Loop over classifiers
             for clf_name, clf in classifiers.items():
                 print(f"  Training classifier: {clf_name} ({iteration}/{total_iterations})")
@@ -226,6 +220,8 @@ def Main():
                     'Test_Accuracy': test_accuracy,
                     'Test_F1': test_f1,
                     'Test_AUC': test_auc,
+                    'Optimal_k': best_k,
+                    'Silhouette_Score': best_silhouette,
                     'X_pca_test': X_pca_test,
                     'y_test_pred': y_test_pred
                 }
@@ -238,7 +234,7 @@ def Main():
     results_df = pd.DataFrame(results)
     top_10_results = results_df.sort_values(by='Test_Accuracy', ascending=False).head(10)
     print("Top 10 Models:")
-    print(top_10_results[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy']])
+    print(top_10_results[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy', 'Best_Params']])
 
     #
     print("\nStarting Clustering Visualization for Top 10 Models...")
@@ -301,11 +297,13 @@ def Main():
     print("\nStarting Image Validation and Sample Display...")
 
     # Identify the best model
-    best_result = results_df.sort_values(by='Test_Accuracy', ascending=False).iloc[0]
-    print("\nBest Model Parameters:")
-    print(best_result[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy', 'Test_F1', 'Test_AUC']])
+    top_results = results_df.sort_values(by='Test_Accuracy', ascending=False).head(3)
+    print("\nTop 3 Model Parameters:")
+    for idx, best_result in top_results.iterrows():
+        print(f"\nModel Rank {idx + 1} Parameters:")
+        print(best_result[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy', 'Test_F1', 'Test_AUC', 'Silhouette_Score', 'Best_Params']])
 
-    # Re-train the best model on the entire training set and evaluate on the test set
+    # Retrieve parameters for the best model
     best_norm = best_result['Normalization']
     best_fs = best_result['Feature_Selection']
     best_pca_components = best_result['PCA_Components']
@@ -319,16 +317,14 @@ def Main():
     # Apply best feature selection
     if best_fs == 'RFE':
         X_fs = feature_selections[best_fs](X_norm, y_train)
-        X_fs_test = feature_selections[best_fs](X_norm_test, y_test)  # Typically, y_test isn't used
+        X_fs_test = feature_selections[best_fs](X_norm_test, y_test)
     else:
         X_fs = feature_selections[best_fs](X_norm, y_train)
         X_fs_test = feature_selections[best_fs](X_norm_test, y_test)
 
-
     # Apply best PCA
     pca, X_pca = fit_pca(X_fs, best_pca_components)
     X_pca_test = pca_transform(pca, X_fs_test)
-
 
     # Train best model
     best_pipeline = create_pipeline([('classifier', best_classifier)])
@@ -338,23 +334,18 @@ def Main():
 
     # Evaluate best model
     test_accuracy, test_f1, test_auc = evaluate_model(y_test, y_test_pred, y_test_proba)
-    print(f"\nBest Model Test Performance:\nAccuracy: {test_accuracy:.4f}, F1 Score: {test_f1:.4f}, AUC: {test_auc:.4f}")
+    print(f"\nModel Rank {idx + 1} Test Performance:\nAccuracy: {test_accuracy:.4f}, F1 Score: {test_f1:.4f}, AUC: {test_auc:.4f}")
 
     # Plot confusion matrix for best model
     plot_confusion_matrix(y_test, y_test_pred, best_classifier_name)
 
-    # ====================== Image Validation and Sample Display ======================
-    print("\nStarting Image Validation and Sample Display...")
-
     # Collect predictions from the best model
-    best_predictions = y_test_pred  # NumPy array
+    best_predictions = y_test_pred
     best_true_labels = y_test
-    best_image_names = image_test.reset_index(drop=True)  # Reset index to align with predictions
+    best_image_names = image_test.reset_index(drop=True)
 
-    # Convert best_predictions to a Pandas Series and reset index
+    # Convert predictions to Pandas Series
     best_predictions = pd.Series(best_predictions).reset_index(drop=True)
-
-    # Ensure best_true_labels is a Series with reset index
     best_true_labels = best_true_labels.reset_index(drop=True)
 
     # Create a DataFrame for analysis
@@ -364,10 +355,6 @@ def Main():
         'predicted_label': best_predictions
     })
 
-    # Verify the DataFrame
-    print("\nValidation DataFrame created successfully.")
-    print(validation_df.head())
-    print(f"Shape of validation_df: {validation_df.shape}")  # Should be (1334, 3)
     # Identify correct and incorrect predictions
     correct_predictions = validation_df[validation_df['true_label'] == validation_df['predicted_label']]
     incorrect_predictions = validation_df[validation_df['true_label'] != validation_df['predicted_label']]
@@ -377,16 +364,17 @@ def Main():
     top_incorrect = incorrect_predictions.head(5)
 
     # Display top correct predictions
-    display_image_samples(top_correct, "Top Correct")
+    display_image_samples(top_correct, f"Top Correct Samples for Model Rank {idx + 1}")
 
     # Display top incorrect predictions
-    display_image_samples(top_incorrect, "Top Incorrect")
-#Function to plot elbow curve and silhouette scores
+    display_image_samples(top_incorrect, f"Top Incorrect Samples for Model Rank {idx + 1}")
 # Function to plot elbow curve and silhouette scores
 def plot_elbow_silhouette(X):
     inertia = []
     silhouette_scores = []
-    K = range(2, 11)  # Vary k from 2 to 10
+    K = range(2, 6)  # Vary k from 2 to 5
+    best_k = 2
+    best_score = -1
     for k in K:
         kmeans = KMeans(n_clusters=k, random_state=0)
         labels = kmeans.fit_predict(X)
@@ -394,7 +382,10 @@ def plot_elbow_silhouette(X):
         silhouette_avg = silhouette_score(X, labels)
         silhouette_scores.append(silhouette_avg)
         print(f"  k={k}, Inertia={kmeans.inertia_:.2f}, Silhouette Score={silhouette_avg:.4f}")
-    
+        if silhouette_avg > best_score:
+            best_score = silhouette_avg
+            best_k = k
+
     # Plot the elbow curve
     plt.figure(figsize=(12, 5))
     plt.subplot(1, 2, 1)
@@ -412,6 +403,8 @@ def plot_elbow_silhouette(X):
     
     plt.tight_layout()
     plt.show()
+
+    return best_k, best_score
 # Function to display images in a grid
 def display_image_samples(samples_df, title_prefix):
     num_samples = samples_df.shape[0]
@@ -502,9 +495,6 @@ def bagging_model():
         n_estimators=10,
         random_state=0
     )
-# Function to create a Gradient Boosted Tree model
-def gradient_boosting_model():
-    return GradientBoostingClassifier(random_state=0)
 # Function to get KFold cross-validation
 def get_kfold():
     return KFold(n_splits=4, shuffle=True, random_state=0)

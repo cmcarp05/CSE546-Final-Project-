@@ -1,0 +1,32 @@
+Model Rank 12 Parameters:
+Normalization           Min-Max Scaling
+Feature_Selection    Variance Threshold
+PCA_Components                        5
+Classifier                          KNN
+Test_Accuracy                  0.896552
+Test_F1                        0.896657
+Test_AUC                       0.974287
+Silhouette_Score               0.452345
+Name: 11, dtype: object
+
+Model Rank 3 Parameters:
+Normalization           Standardization
+Feature_Selection    Variance Threshold
+PCA_Components                        5
+Classifier                          KNN
+Test_Accuracy                  0.892804
+Test_F1                        0.892934
+Test_AUC                       0.974583
+Silhouette_Score               0.446409
+Name: 2, dtype: object
+
+Model Rank 2 Parameters:
+Normalization           Standardization
+Feature_Selection    Variance Threshold
+PCA_Components                        3
+Classifier                          KNN
+Test_Accuracy                  0.874813
+Test_F1                           0.875
+Test_AUC                       0.965482
+Silhouette_Score               0.496204
+Name: 1, dtype: object
