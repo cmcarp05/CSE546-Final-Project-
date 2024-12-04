@@ -49,6 +49,7 @@ param_grids = {
     },
 }
 
+
 def Main():
     # Load the dataset
     file_path = 'archive/Data.csv'
@@ -69,7 +70,8 @@ def Main():
 
     # Separate features and target variable
     X = data.drop(['image_name', 'class'], axis=1)
-    y = data['class']
+    # Map class labels to integers
+    y = data['class'].map(data_mapping)
     image_names = data['image_name']  # Store image names for later use
     print("Features and target variable separated.")
 
@@ -82,18 +84,18 @@ def Main():
     # Define normalization functions
     normalizations = {
         'Standardization': scale_features_standard,
-        'Min-Max Scaling': scale_features_minmax
+        #'Min-Max Scaling': scale_features_minmax
     }
 
     # Define feature selection methods
     feature_selections = {
         'Variance Threshold': select_features_variance_threshold,
-        'RFE': select_features_rfe,
-        'SelectKBest': select_features_selectkbest
+        #'RFE': select_features_rfe,
+        #'SelectKBest': select_features_selectkbest
     }
 
     # Define PCA options
-    pca_options = [2, 3, 5, 7]  # Including 2 for visualization
+    pca_options = [5]  # Including 2 for visualization
 
     # Define classifiers
     classifiers = {
@@ -112,7 +114,7 @@ def Main():
     total_iterations = len(normalizations) * len(feature_selections) * len(pca_options) * len(classifiers)
     iteration = 1
 
-    # ====================== First Pipeline: Preprocessing ======================
+# ====================== First Pipeline: Preprocessing ======================
     print("\nStarting Preprocessing Pipeline...")
     preprocessing_results = []
 
@@ -120,27 +122,28 @@ def Main():
     for norm_name, norm_func in normalizations.items():
         print(f"\nApplying normalization: {norm_name}")
         # Apply normalization
-        X_norm = norm_func(X_train)
-        X_norm_test = norm_func(X_test)
+        scaler, X_norm = norm_func(X_train)
+        X_norm_test = scaler.transform(X_test)
         
         # Loop over feature selection methods
         for fs_name, fs_func in feature_selections.items():
             print(f"  Applying feature selection: {fs_name}")
             if fs_name == 'RFE':
-                X_fs = fs_func(X_norm, y_train)
-                X_fs_test = fs_func(X_norm_test, y_test)  # Typically, y_test isn't used for feature selection
+                selector, X_fs = fs_func(X_norm, y_train)
+                X_fs_test = selector.transform(X_norm_test)
             else:
-                X_fs = fs_func(X_norm, y_train)
-                X_fs_test = fs_func(X_norm_test, y_test)
+                selector, X_fs = fs_func(X_norm, y_train)
+                X_fs_test = selector.transform(X_norm_test)
             
             # Store the preprocessing results
             preprocessing_results.append({
                 'Normalization': norm_name,
                 'Feature_Selection': fs_name,
+                'Scaler': scaler,
+                'Selector': selector,
                 'X_train': X_fs,
                 'X_test': X_fs_test
             })
-
     print("Preprocessing Pipeline completed.")
 
     # ====================== Second Pipeline: PCA & Classification ======================
@@ -155,77 +158,81 @@ def Main():
         fs_name = prep['Feature_Selection']
         X_fs = prep['X_train']
         X_fs_test = prep['X_test']
+        scaler = prep['Scaler']
+        selector = prep['Selector']
+    
+    # Loop over PCA options
+    for n_components in pca_options:
+        print(f"\nApplying PCA with {n_components} components for normalization: {norm_name}, feature selection: {fs_name}")
         
-        # Loop over PCA options
-        for n_components in pca_options:
-            print(f"\nApplying PCA with {n_components} components for normalization: {norm_name}, feature selection: {fs_name}")
+        # Fit PCA on training data
+        pca, X_pca = fit_pca(X_fs, n_components)
+        
+        # Transform test data using the fitted PCA
+        X_pca_test = pca.transform(X_fs_test)
+        
+        print(f"  Shape after PCA: {X_pca.shape}")
+        print(f"  Shape of X_pca_test: {X_pca_test.shape}")
+        
+        # (Your existing code for clustering and visualization)
+        
+        # Loop over classifiers
+        for clf_name, clf in classifiers.items():
+            print(f"  Training classifier: {clf_name} ({iteration}/{total_iterations})")
+            iteration += 1
             
-            # Fit PCA on training data
-            pca, X_pca = fit_pca(X_fs, n_components)
+            # Create pipeline steps: PCA already applied, so only classifier is needed
+            pipeline = create_pipeline([('classifier', clf)])
             
-            # Transform test data using the fitted PCA
-            X_pca_test = pca_transform(pca, X_fs_test)
+            # Get parameter grid for this classifier
+            param_grid = param_grids.get(clf_name, {})
             
-            print(f"  Shape after PCA: {X_pca.shape}")
-            print(f"  Shape of X_pca_test: {X_pca_test.shape}")
-            print("\nPlotting Elbow Curve and Silhouette Scores for KMeans Clustering...")
-            best_k, best_silhouette = plot_elbow_silhouette(X_pca_test)
-            print(f"Optimal number of clusters (k) based on silhouette score: {best_k}")
-            # Loop over classifiers
-            for clf_name, clf in classifiers.items():
-                print(f"  Training classifier: {clf_name} ({iteration}/{total_iterations})")
-                iteration += 1
+            if param_grid:
+                # Create GridSearchCV
+                grid_search = GridSearchCV(
+                    pipeline, param_grid, cv=kf, scoring='accuracy', n_jobs=-1
+                )
                 
-                # Create pipeline steps: PCA already applied, so only classifier is needed
-                pipeline = create_pipeline([('classifier', clf)])
+                # Fit GridSearchCV on the training data
+                grid_search.fit(X_pca, y_train)
                 
-                # Get parameter grid for this classifier
-                param_grid = param_grids.get(clf_name, {})
+                # Get the best estimator
+                best_pipeline = grid_search.best_estimator_
                 
-                if param_grid:
-                    # Create GridSearchCV
-                    grid_search = GridSearchCV(
-                        pipeline, param_grid, cv=kf, scoring='accuracy', n_jobs=-1
-                    )
-                    
-                    # Fit GridSearchCV on the training data
-                    grid_search.fit(X_pca, y_train)
-                    
-                    # Get the best estimator
-                    best_pipeline = grid_search.best_estimator_
-                    
-                    # Cross-validation score
-                    mean_cv_score = grid_search.best_score_
-                    best_params = grid_search.best_params_
-                else:
-                    # If no parameter grid is specified, just fit the pipeline
-                    pipeline.fit(X_pca, y_train)
-                    best_pipeline = pipeline
-                    mean_cv_score = pipeline.score(X_pca, y_train)
-                    best_params = {}
-                
-                # Test set evaluation
-                y_test_pred = best_pipeline.predict(X_pca_test)
-                y_test_proba = best_pipeline.predict_proba(X_pca_test)
-                test_accuracy, test_f1, test_auc = evaluate_model(y_test, y_test_pred, y_test_proba)
-                
-                # Store results
-                result = {
-                    'Normalization': norm_name,
-                    'Feature_Selection': fs_name,
-                    'PCA_Components': n_components,
-                    'Classifier': clf_name,
-                    'Best_Params': best_params,
-                    'CV_Mean_Accuracy': mean_cv_score,
-                    'Test_Accuracy': test_accuracy,
-                    'Test_F1': test_f1,
-                    'Test_AUC': test_auc,
-                    'Optimal_k': best_k,
-                    'Silhouette_Score': best_silhouette,
-                    'X_pca_test': X_pca_test,
-                    'y_test_pred': y_test_pred
-                }
-                results.append(result)
+                # Cross-validation score
+                mean_cv_score = grid_search.best_score_
+                best_params = grid_search.best_params_
+            else:
+                # If no parameter grid is specified, just fit the pipeline
+                pipeline.fit(X_pca, y_train)
+                best_pipeline = pipeline
+                mean_cv_score = pipeline.score(X_pca, y_train)
+                best_params = {}
+            
+            # Test set evaluation
+            y_test_pred = best_pipeline.predict(X_pca_test)
+            y_test_proba = best_pipeline.predict_proba(X_pca_test)
+            test_accuracy, test_f1, test_auc = evaluate_model(y_test, y_test_pred, y_test_proba)
+            
+            # Store results
+            result = {
+                'Normalization': norm_name,
+                'Feature_Selection': fs_name,
+                'Scaler': scaler,
+                'Selector': selector,
+                'PCA': pca,
+                'PCA_Components': n_components,
+                'Classifier': clf_name,
+                'Best_Pipeline': best_pipeline,
+                'Best_Params': best_params,
+                'CV_Mean_Accuracy': mean_cv_score,
+                'Test_Accuracy': test_accuracy,
+                'Test_F1': test_f1,
+                'Test_AUC': test_auc,
+                'X_pca_test': X_pca_test,
+                'y_test_pred': y_test_pred
+            }
+            results.append(result)
 
     print("\nPCA & Classification Pipeline completed.")
 
@@ -236,7 +243,7 @@ def Main():
     print("Top 10 Models:")
     print(top_10_results[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy', 'Best_Params']])
 
-    #
+    
     print("\nStarting Clustering Visualization for Top 10 Models...")
 
     # Select top 10 models
@@ -301,33 +308,33 @@ def Main():
     print("\nTop 3 Model Parameters:")
     for idx, best_result in top_results.iterrows():
         print(f"\nModel Rank {idx + 1} Parameters:")
-        print(best_result[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy', 'Test_F1', 'Test_AUC', 'Silhouette_Score', 'Best_Params']])
+        print(best_result[['Normalization', 'Feature_Selection', 'PCA_Components', 'Classifier', 'Test_Accuracy', 'Test_F1', 'Test_AUC', 'Best_Params']])
 
-    # Retrieve parameters for the best model
+    # Retrieve parameters and transformers for the best model
+    best_result = top_results.iloc[0]  # Get the best model
     best_norm = best_result['Normalization']
     best_fs = best_result['Feature_Selection']
     best_pca_components = best_result['PCA_Components']
     best_classifier_name = best_result['Classifier']
     best_classifier = classifiers[best_classifier_name]
+    best_scaler = best_result['Scaler']
+    best_selector = best_result['Selector']
+    best_pca = best_result['PCA']
+    best_pipeline = best_result['Best_Pipeline']
 
-    # Apply best normalization
-    X_norm = normalizations[best_norm](X_train)
-    X_norm_test = normalizations[best_norm](X_test)
+    # Apply best normalization using the saved scaler
+    X_norm = best_scaler.transform(X_train)
+    X_norm_test = best_scaler.transform(X_test)
 
-    # Apply best feature selection
-    if best_fs == 'RFE':
-        X_fs = feature_selections[best_fs](X_norm, y_train)
-        X_fs_test = feature_selections[best_fs](X_norm_test, y_test)
-    else:
-        X_fs = feature_selections[best_fs](X_norm, y_train)
-        X_fs_test = feature_selections[best_fs](X_norm_test, y_test)
+    # Apply best feature selection using the saved selector
+    X_fs = best_selector.transform(X_norm)
+    X_fs_test = best_selector.transform(X_norm_test)
 
-    # Apply best PCA
-    pca, X_pca = fit_pca(X_fs, best_pca_components)
-    X_pca_test = pca_transform(pca, X_fs_test)
+    # Apply best PCA using the saved PCA object
+    X_pca = best_pca.transform(X_fs)
+    X_pca_test = best_pca.transform(X_fs_test)
 
     # Train best model
-    best_pipeline = create_pipeline([('classifier', best_classifier)])
     best_pipeline.fit(X_pca, y_train)
     y_test_pred = best_pipeline.predict(X_pca_test)
     y_test_proba = best_pipeline.predict_proba(X_pca_test)
@@ -368,6 +375,48 @@ def Main():
 
     # Display top incorrect predictions
     display_image_samples(top_incorrect, f"Top Incorrect Samples for Model Rank {idx + 1}")
+
+
+# ====================== Predicting on New Data ======================
+    print("\nApplying Best Model to New Data...")
+
+    # Load the final dataset
+    file_path = 'archive/test_feature_data.csv'
+    final_data = pd.read_csv(file_path)
+    print("Final Dataset loaded.")
+
+    # Ensure the new data has the same features
+    missing_cols = set(X_train.columns) - set(final_data.columns)
+    if missing_cols:
+        print(f"New data is missing columns: {missing_cols}")
+        # Handle missing columns (e.g., add them with default values)
+        for col in missing_cols:
+            final_data[col] = 0  # or use appropriate default values
+    # Ensure the order of columns matches
+    final_data = final_data[X_train.columns]
+
+    # Apply the same preprocessing steps to the final data
+    X_final_norm = best_scaler.transform(final_data)
+    X_final_fs = best_selector.transform(X_final_norm)
+    X_final_pca = best_pca.transform(X_final_fs)
+
+    # Make predictions on the final data
+    y_final_pred = best_pipeline.predict(X_final_pca)
+
+    # Map integer predictions back to class labels
+    y_final_pred_labels = [inverse_data_mapping[pred] for pred in y_final_pred]
+
+    # Create a DataFrame for predictions
+    predictions_df = pd.DataFrame({
+        'Sample_Index': range(len(y_final_pred)),
+        'Predicted_Label': y_final_pred_labels
+    })
+
+    # Display or save the predictions
+    print(predictions_df.head(50))
+    predictions_df.to_csv('final_output.csv', index=False)
+
+
 # Function to plot elbow curve and silhouette scores
 def plot_elbow_silhouette(X):
     inertia = []
@@ -430,14 +479,16 @@ def display_image_samples(samples_df, title_prefix):
 # Function to get the image path based on the image name and class label
 def get_image_path(image_name, class_label):
     base_dir = 'archive/images'
-    class_dir = class_label.lower()  # Ensure directory names are lowercase
+    # Map integer class label back to class name
+    class_name = inverse_data_mapping[class_label]
+    class_dir = class_name.lower()  # Ensure directory names are lowercase
     image_path = os.path.join(base_dir, class_dir, image_name)
     return image_path
 # Function to scale features using standardization
 def scale_features_standard(X):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    return X_scaled
+    return scaler, X_scaled
 # Function to scale features using Min-Max scaling
 def scale_features_minmax(X):
     scaler = MinMaxScaler()
@@ -456,7 +507,7 @@ def fit_pca(X, n_components):
 def select_features_variance_threshold(X, y, threshold=0.0):
     selector = VarianceThreshold(threshold=threshold)
     X_new = selector.fit_transform(X)
-    return X_new
+    return selector, X_new
 # Function to select features using Recursive Feature Elimination (RFE)
 def select_features_rfe(X, y, n_features=50):
     estimator = RandomForestClassifier(random_state=0)
@@ -562,8 +613,12 @@ def display_top_results(results_df, metric, top_n=5):
     print(sorted_df)
 # Function to plot a confusion matrix
 def plot_confusion_matrix(y_true, y_pred, classifier_name):
-    cm = confusion_matrix(y_true, y_pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=sorted(set(y_true)))
+    # Define the labels and their names
+    labels = [0, 1, 2, 3, 4]
+    label_names = [inverse_data_mapping[i] for i in labels]
+    
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=label_names)
     disp.plot(cmap=plt.cm.Blues)
     plt.title(f'Confusion Matrix: {classifier_name}')
     plt.show()
